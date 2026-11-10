@@ -1,0 +1,20 @@
+# Personal files never belong in this repository.
+preference.json
+preference.md
+job-hunter-backup-*.json
+job-records-*.csv
+.env
+.env.*
+*.db
+*.db-*
+*.sqlite*
+*.bak*
+data/
+outputs/
+reference/
+private/
+node_modules/
+_site/
+*.log
+.DS_Store
+Thumbs.db

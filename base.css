@@ -1,0 +1,584 @@
+﻿
+  :root {
+    --bg: #ffffff;
+    --fg: #000000;
+    --mute: #8e8e8e;
+    --faint: #c9c9c9;
+    --rule: #e2e2e2;
+    --sink: #f4f4f4;
+    --inv-bg: #000000;
+    --inv-fg: #ffffff;
+    --blue: #1a56db;        /* 新職缺 highlight */
+    --blue-h: #7fb0ff;      /* 新職缺 on inverted (hover) rows */
+    --ok: #12805c;          /* ✓ 已更新 */
+    /* 投遞進度配色 — 「統計」的流向圖跟「紀錄」的篩選列、進度選單共用這五個 --st-*:
+       進展是 藍(一面) → 綠(二面) → 紅(Offer); 等待回覆+沒下文+履歷被拒 合併成深灰,
+       面試後被拒用淡一階的灰。兩種模式的色階是分開挑過的,不是直接反色。 */
+    --st-i1: #2a6fd6;      /* 一面: 進入面試、一面等回覆 */
+    --st-i2: #15a06a;      /* 二面: 二面、二面等回覆 */
+    --st-offer: #e0312c;   /* Offer */
+    --st-dead: #4f4f4f;    /* 等待回覆 + 沒下文 + 履歷被拒 (合併用同一色) */
+    --st-rej-i: #a9a9a9;   /* 一面後／二面後被拒 */
+    --sk-offer: var(--st-offer);
+    --sk-i1: var(--st-i1);         --sk-wait_i1: var(--st-i1);
+    --sk-i2: var(--st-i2);         --sk-wait_i2: var(--st-i2);
+    --sk-waiting: var(--st-dead);  --sk-silent: var(--st-dead);
+    --sk-rej_resume: var(--st-dead);
+    --sk-rej_i1: var(--st-rej-i);  --sk-rej_i2: var(--st-rej-i);
+    /* 投遞熱度: 1 份 light blue -> 5 份 blue -> 10+ 份 black (white in dark); 0 = --rule */
+    --h-lo: #ccccff; --h-mid: #0000ff; --h-hi: var(--fg);
+    --grotesk: "Helvetica Neue", Helvetica, "Inter", Arial, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    --mono: "Cascadia Mono", ui-monospace, Consolas, monospace;
+    --pad: 26px;
+  }
+  html[data-theme="dark"] {
+    --bg: #000000;
+    --fg: #ffffff;
+    --mute: #7a7a7a;
+    --faint: #3d3d3d;
+    --rule: #232323;
+    --sink: #131313;
+    --inv-bg: #ffffff;
+    --inv-fg: #000000;
+    --blue: #6b9bff;
+    --blue-h: #2f6bd6;
+    --ok: #3ecf8e;
+    /* 深色模式只重挑這五個; 上面的 --sk-* 對應是 var() 引用,會跟著變。 */
+    --st-i1: #4f8ff0;      --st-i2: #22b37d;      --st-offer: #f0564e;
+    --st-dead: #6d6d6d;    --st-rej-i: #ababab;
+    --h-lo: #000066; --h-mid: #0000ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; min-height: 100vh; background: var(--bg); color: var(--fg);
+    font-family: var(--grotesk); font-size: 15px; line-height: 1.45;
+    -webkit-font-smoothing: antialiased;
+    transition: background .2s, color .2s;
+  }
+  ::selection { background: var(--fg); color: var(--bg); }
+  button { appearance: none; font: inherit; background: none; border: none; color: inherit; cursor: pointer; }
+
+  /* ── top bar ─────────────────────────────────────── */
+  .topbar {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
+    padding: 16px var(--pad);
+  }
+  .toggle {
+    display: inline-flex; background: var(--sink); border-radius: 999px; padding: 3px;
+    font-size: 13px; width: fit-content;
+  }
+  .toggle button {
+    display: flex; align-items: center; gap: 7px; padding: 5px 13px; border-radius: 999px;
+    color: var(--mute); letter-spacing: -.01em;
+  }
+  .toggle button::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--faint);
+  }
+  .toggle button.on { background: var(--bg); color: var(--fg); font-weight: 500; }
+  .toggle button.on::before { background: var(--fg); }
+  .wordmark { text-align: center; font-size: 13px; font-weight: 700; letter-spacing: .02em; }
+  .topright { text-align: right; font-size: 13px; }
+  .topright button { text-decoration: underline; text-underline-offset: 3px; }
+  .topright button:hover { color: var(--mute); }
+  .topright .idle { color: var(--mute); text-decoration: none; margin-right: 14px; font-family: var(--mono); font-size: 11.5px; }
+
+  /* ── 打卡上下班 ──────────────────────────────────── */
+  .clock { position: relative; display: inline-flex; align-items: center; gap: 12px; margin-right: 18px; }
+  .topright .clock-sum { text-decoration: none; font-family: var(--mono); font-size: 11.5px; color: var(--mute);
+                         display: inline-flex; align-items: center; gap: 6px; font-variant-numeric: tabular-nums; }
+  .topright .clock-sum:hover { color: var(--fg); }
+  .clock-sum .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
+                    animation: blink 1.6s ease-in-out infinite; }
+  .topright .clock-btn { text-decoration: none; border: 1px solid var(--fg); border-radius: 999px;
+                         padding: 4px 13px; font-weight: 500; transition: background .14s, color .14s; }
+  .topright .clock-btn:hover { background: var(--fg); color: var(--bg); }
+  .topright .clock-btn.on { background: var(--fg); color: var(--bg); }
+  .topright .clock-btn.on:hover { opacity: .78; color: var(--bg); }
+  .topright .clock-btn:disabled { opacity: .4; cursor: default; }
+  .clock-panel { position: absolute; right: 0; top: calc(100% + 10px); z-index: 97; width: 300px;
+                 text-align: left; background: var(--bg); border: 1px solid var(--fg); padding: 12px 14px 10px; }
+  .clock-panel[hidden] { display: none; }
+  .cp-head b { font-size: 13px; font-weight: 700; letter-spacing: -.01em; }
+  .cp-meta { font-family: var(--mono); font-size: 11px; color: var(--mute); margin: 3px 0 10px; }
+  .cp-row { display: grid; grid-template-columns: 62px 1fr 42px; align-items: center; gap: 8px;
+            font-family: var(--mono); font-size: 11px; color: var(--mute); padding: 2px 0; }
+  .cp-row.today { color: var(--fg); }
+  .cp-bar { height: 6px; background: var(--rule); }
+  .cp-bar > i { display: block; height: 100%; background: var(--fg); }
+  .cp-row .t { text-align: right; font-variant-numeric: tabular-nums; }
+  .cp-foot { font-size: 10.5px; color: var(--mute); margin-top: 8px; }
+
+  /* ── 休息時間提醒 ────────────────────────────────── */
+  .rest { position: relative; display: none; align-items: center; }
+  .rest.show { display: inline-flex; }
+  .rest-chip { font-family: var(--mono); font-size: 11.5px; color: var(--mute);
+               border: 1px solid var(--rule); border-radius: 999px; padding: 3px 10px;
+               display: inline-flex; align-items: center; gap: 6px;
+               font-variant-numeric: tabular-nums; cursor: default; }
+  .rest-chip .dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%;
+                    background: var(--faint); }
+  .rest.due .rest-chip { color: var(--fg); border-color: var(--fg); }
+  .rest.due .rest-chip .dot { background: var(--fg); animation: blink 1.6s ease-in-out infinite; }
+  .rest.resting .rest-chip { color: var(--ok); border-color: var(--ok); }
+  .rest.resting .rest-chip .dot { background: var(--ok); }
+  /* 小框框：滑鼠移過去（或鍵盤 focus）才出現 */
+  .rest-tip { position: absolute; right: 0; top: calc(100% + 9px); z-index: 98; width: 232px;
+              text-align: left; background: var(--bg); border: 1px solid var(--fg);
+              padding: 10px 12px 9px; opacity: 0; visibility: hidden;
+              transition: opacity .13s; pointer-events: none; }
+  .rest:hover .rest-tip, .rest:focus-within .rest-tip { opacity: 1; visibility: visible; }
+  .rest-tip b { font-size: 13px; font-weight: 700; letter-spacing: -.01em; }
+  .rest-tip .rt-big { display: block; margin-bottom: 6px; }
+  .rest-tip .rt-row { font-family: var(--mono); font-size: 11px; color: var(--mute);
+                      padding: 1px 0; font-variant-numeric: tabular-nums; }
+  .rest-tip .rt-row b { font-family: var(--grotesk); font-size: 11.5px; color: var(--fg); }
+  .rest-tip .rt-foot { font-size: 10.5px; color: var(--mute); margin-top: 8px;
+                       border-top: 1px solid var(--rule); padding-top: 6px; }
+
+  /* ── giant nav ───────────────────────────────────── */
+  nav {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    gap: 16px; padding: 6px var(--pad) 26px; flex-wrap: wrap;
+  }
+  .tab {
+    font-size: clamp(30px, 5.4vw, 62px); font-weight: 700; letter-spacing: -.035em;
+    line-height: .95; color: var(--faint); padding: 0;
+    display: inline-flex; align-items: flex-start;
+    transition: color .16s;
+  }
+  .tab:hover { color: var(--mute); }
+  .tab.active { color: var(--fg); }
+  .tab .num {
+    font-size: clamp(11px, 1.5vw, 19px); font-weight: 700; letter-spacing: -.02em;
+    margin-left: 4px; margin-top: .1em; color: inherit;
+  }
+
+  /* ── rows (full-bleed, hairline, invert on hover) ── */
+  .sheet { border-top: 1px solid var(--fg); }
+  .row {
+    display: grid; align-items: center; gap: 20px;
+    padding: 14px var(--pad); border-bottom: 1px solid var(--rule);
+    transition: background .1s, color .1s;
+  }
+  .row:hover { background: var(--inv-bg); color: var(--inv-fg); }
+  .row:hover .sub, .row:hover .mono, .row:hover .tags { color: var(--inv-fg); opacity: .62; }
+  .row:hover a, .row:hover .act { color: var(--inv-fg); }
+  .row:hover .bar { background: rgba(128,128,128,.45); }
+  .row:hover .bar > i { background: var(--inv-fg); }
+  .row:hover select { color: var(--inv-fg); border-color: var(--inv-fg); }
+  .row.head {
+    border-bottom: none; padding-top: 0; padding-bottom: 9px;
+    font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute);
+  }
+  .row.head:hover { background: none; color: var(--mute); }
+
+  .jobrow { grid-template-columns: 58px 1.1fr 2fr 1fr 92px 118px 112px; }
+  .acts { text-align: right; }
+  .rowbtns { display: flex; align-items: center; justify-content: flex-end; gap: 5px; flex-wrap: wrap; }
+  /* 👍/👎 — Jack & Jill 式回饋:不置頂、不隱藏,純粹教系統多/少推薦這種工作 */
+  .fb {
+    width: 24px; height: 24px; padding: 0; font-size: 12px; line-height: 1;
+    filter: grayscale(1); opacity: .35; transition: opacity .14s, transform .14s, filter .14s;
+  }
+  .fb:hover { opacity: .8; transform: scale(1.25); }
+  .fb.on { filter: none; opacity: 1; }
+  .row:hover .fb { opacity: .55; }
+  .row:hover .fb.on, .row:hover .fb:hover { opacity: 1; }
+  /* cross a job off — trains InterestAgent on what she does NOT want */
+  .x {
+    width: 24px; height: 24px; padding: 0; font-size: 13px; line-height: 1;
+    color: var(--faint); border: 1px solid transparent; border-radius: 50%;
+    transition: color .14s, border-color .14s, transform .14s;
+  }
+  .x:hover { color: var(--fg); border-color: var(--rule); transform: rotate(90deg); }
+  .row:hover .x { color: var(--inv-fg); opacity: .5; }
+  .row:hover .x:hover { opacity: 1; border-color: currentColor; }
+  /* 精選置頂 — starred jobs pin to the top of the list */
+  .star {
+    width: 24px; height: 24px; padding: 0; font-size: 14px; line-height: 1;
+    color: var(--faint); transition: color .14s, transform .14s;
+  }
+  .star:hover { color: var(--fg); transform: scale(1.3); }
+  .star.on { color: var(--fg); }
+  /* 待投 📌 — save a job to apply to later */
+  .pin { background: none; border: 0; cursor: pointer; font-size: 15px; padding: 0 2px;
+         opacity: .3; filter: grayscale(1); transition: opacity .12s, filter .12s, transform .12s; }
+  .pin:hover { opacity: 1; filter: none; transform: scale(1.25); }
+  .pin.on { opacity: 1; filter: none; }
+  .row:hover .star { color: var(--inv-fg); opacity: .5; }
+  .row:hover .star.on, .row:hover .star:hover { opacity: 1; }
+  .row.dismissing { opacity: 0; transform: translateX(-14px); transition: opacity .28s, transform .28s; }
+  .approw { grid-template-columns: 92px 1.15fr 2.4fr 1.1fr 150px 60px; }
+  /* a re-added posting merges into its existing row, so point at the row that
+     changed — otherwise the add looks like it did nothing */
+  .approw.flash { animation: flashrow 2.4s ease-out; }
+  @keyframes flashrow { 0%, 55% { background: color-mix(in srgb, var(--ok) 22%, transparent); }
+                        100% { background: transparent; } }
+
+  .big {
+    font-size: clamp(19px, 2.5vw, 30px); font-weight: 700; letter-spacing: -.032em;
+    line-height: 1.1;
+  }
+  .big a { color: inherit; text-decoration: none; }
+  .big a:hover { text-decoration: underline; text-underline-offset: 4px; }
+  .sub { font-size: 14px; color: var(--mute); letter-spacing: -.01em; }
+  .tags { font-size: 13.5px; color: var(--mute); }
+  .mono { font-family: var(--mono); font-size: 12.5px; color: var(--mute); font-variant-numeric: tabular-nums; }
+  .score { font-family: var(--mono); font-size: 17px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .score.s-lo { color: var(--faint); }
+  /* what the system has learned to hunt for, from what she pastes/searches/applies to */
+  .learned { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+             padding: 0 var(--pad) 20px; font-size: 12.5px; color: var(--mute); }
+  .learned:empty { display: none; }
+  .learned .lbl { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; }
+  .learned .t { border: 1px solid var(--rule); padding: 3px 9px; color: var(--fg); white-space: nowrap; }
+  .learned .t i { font-style: normal; color: var(--mute); font-family: var(--mono); font-size: 11px; margin-left: 5px; }
+  .learned .lbl.no { margin-left: 10px; }
+  .learned .t.no { color: var(--mute); text-decoration: line-through; text-decoration-thickness: 1px; }
+
+  /* ── 更新狀態列 (checked on every open of 職缺) ─────── */
+  .updated { display: flex; align-items: center; gap: 9px;
+             padding: 0 var(--pad) 18px; font-size: 13.5px; }
+  .updated:empty { display: none; }
+  .updated .ck { display: inline-flex; align-items: center; justify-content: center;
+                 width: 19px; height: 19px; border-radius: 50%;
+                 background: var(--ok); color: #fff; font-size: 12px; font-weight: 700; }
+  html[data-theme="dark"] .updated .ck { color: #000; }
+  .updated.ok { color: var(--fg); font-weight: 500; }
+  .updated.stale { color: var(--mute); }
+  .updated .u-meta { color: var(--mute); font-family: var(--mono); font-size: 11.5px;
+                     font-weight: 400; }
+
+  /* ── 區塊標題 + 分頁 ──────────────────────────── */
+  .listhead { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap;
+              padding: 4px var(--pad) 12px; }
+  .listhead:empty { display: none; }
+  .listhead b { font-size: clamp(17px, 2.1vw, 24px); font-weight: 700;
+                letter-spacing: -.03em; }
+  .listhead .u-meta { font-family: var(--mono); font-size: 11.5px; color: var(--mute); }
+  #newBlock { margin-bottom: 34px; }
+
+  .pager { display: flex; align-items: center; gap: 20px;
+           padding: 16px var(--pad) 30px; }
+  .pager:empty { display: none; }
+  .pager .pnum { font-family: var(--mono); font-size: 11.5px; color: var(--mute); }
+  .pager button[disabled] { color: var(--faint); text-decoration: none; cursor: default; }
+  .pager button[disabled]:hover { color: var(--faint); }
+
+  /* ── 新職缺 (first seen in the latest scan) — blue ─── */
+  .jobrow.new .big { color: var(--blue); }
+  .jobrow.new:hover .big, .jobrow.new:hover .big a { color: var(--blue-h); }
+  .newtag { color: var(--blue); font-size: .5em; font-weight: 700; vertical-align: super;
+            margin-left: 6px; letter-spacing: .02em; }
+  .jobrow.new:hover .newtag { color: var(--blue-h); }
+
+  /* 同一個職缺被灑到很多城市 — 收合成一列,標記剩下幾個地點 */
+  .dupn { font-family: var(--mono); font-size: 10.5px; color: var(--faint);
+          margin-left: 7px; white-space: nowrap; }
+  .row:hover .dupn { color: var(--inv-fg); opacity: .5; }
+
+  .req { font-family: var(--mono); font-size: 12px; color: var(--mute); white-space: nowrap; }
+  .req.warn { color: var(--fg); }
+  .req.bad  { color: var(--fg); text-decoration: line-through; text-decoration-thickness: 1.5px; opacity: .55; }
+  .row:hover .req { color: var(--inv-fg); }
+  .barwrap { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: 12px; color: var(--mute); }
+  .bar { width: 40px; height: 3px; background: var(--rule); }
+  .bar > i { display: block; height: 100%; background: var(--fg); }
+  .act {
+    font-size: 13.5px; text-align: right; white-space: nowrap;
+    text-decoration: underline; text-underline-offset: 3px;
+  }
+  .act:hover { opacity: .55; }
+  .act.off { text-decoration: none; color: var(--faint); cursor: default; }
+  .act.off:hover { opacity: 1; }
+  .tag-state { font-size: 13px; color: var(--mute); }
+  .row:hover .tag-state { color: var(--inv-fg); opacity: .62; }
+  .empty { padding: 90px var(--pad); text-align: center; color: var(--mute); font-size: 15px; }
+  .empty b { display: block; font-size: clamp(22px, 3vw, 34px); font-weight: 700;
+             letter-spacing: -.03em; color: var(--fg); margin-bottom: 10px; }
+  .skel { height: 13px; background: var(--sink); animation: fade 1.3s ease-in-out infinite; }
+  @keyframes fade { 50% { opacity: .4; } }
+
+  .dateinput {
+    background: transparent; color: var(--fg); border: none;
+    border-bottom: 1px solid var(--rule); border-radius: 0; padding: 4px 0;
+    font-family: var(--mono); font-size: 12.5px; cursor: pointer; width: 100%;
+  }
+  .dateinput:focus { outline: none; border-bottom-color: var(--fg); }
+  .dateinput::-webkit-calendar-picker-indicator { filter: invert(var(--cal, 0)); opacity: .45; cursor: pointer; }
+  html[data-theme="dark"] .dateinput::-webkit-calendar-picker-indicator { filter: invert(1); }
+  .row:hover .dateinput { color: var(--inv-fg); border-bottom-color: rgba(128,128,128,.5); }
+  html[data-theme="light"] .row:hover .dateinput::-webkit-calendar-picker-indicator { filter: invert(1); }
+  html[data-theme="dark"]  .row:hover .dateinput::-webkit-calendar-picker-indicator { filter: invert(0); }
+  .field { display: flex; flex-direction: column; gap: 3px; }
+  .field span { font-size: 10.5px; letter-spacing: .09em; text-transform: uppercase; color: var(--mute); }
+  .row.seen { opacity: .4; }                       /* 點開看過的職缺 — 淡化 */
+  .row.seen:hover { opacity: 1; }
+  .row.seen.starred { opacity: 1; }                /* 精選永遠清楚,不因看過而變淡 */
+  .row.gone { opacity: .42; }
+  .row.gone .big { text-decoration: line-through; text-decoration-thickness: 2px; }
+  .row.gone:hover { background: none; color: inherit; }
+  .row.checking .big::after {
+    content: ""; display: inline-block; width: 5px; height: 5px; margin-left: 9px;
+    background: var(--faint); vertical-align: middle; animation: blink 1s ease-in-out infinite;
+  }
+  .dead {
+    display: none; font-size: 11px; letter-spacing: .06em;
+    border: 1px solid currentColor; padding: 2px 6px; color: var(--mute); white-space: nowrap;
+  }
+  .row.gone .dead { display: inline-block; }
+  .row.gone .act { display: none; }
+
+  select {
+    background: transparent; color: var(--fg); border: 1px solid var(--rule);
+    border-radius: 0; padding: 5px 6px; font: inherit; font-size: 12.5px; cursor: pointer;
+  }
+  select:focus { outline: none; border-color: currentColor; }
+  /* 進度顏色 — 跟流向圖共用 --st-* (見 :root)。.row:hover select 段位較高,
+     所以游標移到那一列時進度選單還是跟著整列反色。 */
+  select.st-applied, select.st-screening, select.st-rejected,
+  option.st-applied, option.st-screening, option.st-rejected { color: var(--st-dead); }
+  select.st-rejected_interview, option.st-rejected_interview { color: var(--st-rej-i); }
+  select.st-interview,  option.st-interview  { color: var(--st-i1); }
+  select.st-interview2, option.st-interview2 { color: var(--st-i2); }
+  select.st-offer,      option.st-offer      { color: var(--st-offer); }
+
+  /* ── panes / forms ───────────────────────────────── */
+  .pane { padding: 0 var(--pad) 280px; }   /* room to scroll the last rows clear of 投遞熱度 */
+  .pane.flush { padding-left: 0; padding-right: 0; }
+  .lede {
+    font-size: clamp(20px, 2.6vw, 30px); font-weight: 700; letter-spacing: -.032em;
+    line-height: 1.18; max-width: 20em; margin: 26px 0 30px;
+  }
+  .lede em { font-style: normal; color: var(--mute); }
+  /* paste view: input column on the left (a third), output on the right */
+  .split { display: grid; grid-template-columns: minmax(260px, 1fr) 2fr; gap: 34px; align-items: start; }
+  .paste { display: flex; align-items: flex-end; gap: 16px; position: sticky; top: 20px; }
+  .paste textarea {
+    flex: 1; min-width: 0;
+    height: calc(100vh - 190px); min-height: 300px; resize: none;
+  }
+  .output { min-width: 0; }
+  /* inside the right column the sections carry no page gutter of their own */
+  .output #progress, .output #result, .output #choices { padding: 0; }
+  .output #error { margin: 0 0 20px; }
+  .output .kit-head, .output .filetabs, .output .doc, .output .row { padding-left: 0; padding-right: 0; }
+  .output .doc { padding-top: 28px; }
+  .output .filetabs { padding-top: 14px; padding-bottom: 13px; }
+  .output .row:hover { background: none; color: inherit; }
+  .output .row:hover .act { color: var(--fg); }
+  textarea {
+    width: 100%; min-height: 260px; resize: vertical; display: block;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--fg); border-radius: 0;
+    padding: 22px; font: inherit; font-size: 15px; line-height: 1.7; letter-spacing: -.01em;
+  }
+  textarea::placeholder { color: var(--faint); }
+  textarea:focus { outline: none; }
+  .cta {
+    display: inline-flex; align-items: center; gap: 12px;
+    background: var(--fg); color: var(--bg); padding: 15px 26px;
+    font-size: 16px; font-weight: 700; letter-spacing: -.02em;
+    transition: opacity .15s;
+  }
+  .cta:hover:not(:disabled) { opacity: .78; }
+  .cta:disabled { opacity: .35; cursor: default; }
+  .actions { display: flex; gap: 20px; align-items: center; flex-wrap: wrap; margin-top: 18px; }
+  .note { font-size: 13px; color: var(--mute); }
+
+  /* circular submit — the only control on the paste view */
+  .go {
+    width: 54px; height: 54px; border-radius: 50%;
+    background: var(--fg); color: var(--bg);
+    display: grid; place-items: center; padding: 0;
+    transition: transform .16s cubic-bezier(.2,.8,.2,1), opacity .16s;
+  }
+  .go::after {
+    content: ""; width: 15px; height: 15px;
+    border-top: 2px solid currentColor; border-right: 2px solid currentColor;
+    transform: rotate(45deg) translate(-2px, 2px);
+  }
+  .go:hover:not(:disabled) { transform: translateX(4px); }
+  .go:disabled { opacity: .3; cursor: default; }
+  .link { font-size: 13.5px; text-decoration: underline; text-underline-offset: 3px; }
+  .link:hover { color: var(--mute); }
+
+  .toolbar {
+    display: flex; gap: 22px; align-items: center; flex-wrap: wrap;
+    padding: 0 var(--pad) 22px;
+  }
+  input[type=text] {
+    flex: 1; min-width: 180px; background: transparent; color: var(--fg);
+    border: none; border-bottom: 1px solid var(--rule); border-radius: 0;
+    padding: 9px 0; font: inherit; font-size: 15px; letter-spacing: -.01em;
+  }
+  input[type=text]::placeholder { color: var(--faint); }
+  input[type=text]:focus { outline: none; border-bottom-color: var(--fg); }
+  .addgrid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 6px 22px; align-items: end; padding: 22px var(--pad) 26px;
+    background: var(--sink); margin-bottom: 2px;
+  }
+  .addgrid .cta { padding: 11px 20px; font-size: 14px; justify-content: center; }
+
+  /* ── funnel ──────────────────────────────────────── */
+  .funnel { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+            border-top: 1px solid var(--fg); border-bottom: 1px solid var(--fg); }
+  .stat { padding: 20px var(--pad); border-right: 1px solid var(--rule);
+          display: block; width: 100%; text-align: left; transition: background .15s, color .15s; }
+  .stat:last-child { border-right: none; }
+  .stat:hover { background: var(--sink); }
+  .stat.on { background: var(--inv-bg); color: var(--inv-fg); }
+  .stat.on .k { color: var(--inv-fg); opacity: .65; }
+  .stat .n { font-size: clamp(28px, 3.4vw, 42px); font-weight: 700; letter-spacing: -.04em;
+             line-height: 1; font-variant-numeric: tabular-nums; }
+  .stat .k { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+             color: var(--mute); margin-top: 9px; }
+  /* 紀錄頁的篩選列 — 跟流向圖同色 */
+  .stat.f-waiting .n, .stat.f-dead .n { color: var(--st-dead); }
+  .stat.f-rejected .n { color: var(--st-rej-i); }
+  .stat.f-interview .n { color: var(--st-i1); }
+  .stat.f-offer .n { color: var(--st-offer); }
+  .stat.on .n { color: var(--inv-fg); }   /* 選中那一欄是反色的,要排在上面幾條後面 */
+  .stat.flat { cursor: default; }
+  .stat.flat:hover { background: none; }
+
+  /* ── 統計: 流向圖 + 面試率 ────────────────────────── */
+  .block { padding: 34px var(--pad) 0; }
+  .block h3 { font-size: 11px; letter-spacing: .12em; text-transform: uppercase;
+              font-weight: 700; margin: 0; padding-bottom: 10px;
+              border-bottom: 1px solid var(--fg); }
+  .block .note { font-size: 12.5px; color: var(--mute); margin: 12px 0 0; max-width: 52em; }
+  .sankey { margin: 20px 0 0; }
+  .sankey svg { display: block; width: 100%; height: auto; overflow: visible; }
+  .sankey .nd { fill: var(--fg); }       /* 實際顏色由 --sk-<key> 套在 style 上 */
+  .sankey .fl { fill: var(--faint); transition: opacity .15s; }
+  .sankey .fl.up { opacity: .45; }                         /* 往前走的流向 */
+  .sankey .fl.out { opacity: .35; }                        /* 被拒 / 沒下文 / 還在等 */
+  .sankey .fl:hover { opacity: .85; }
+  .sankey text { font-size: 12.5px; fill: var(--fg); }
+  .sankey text .n { font-family: var(--mono); font-size: 11.5px; fill: var(--mute); }
+  /* 面試率表格 — 分類 | 投遞 | 回覆 | 面試 | 面試率 */
+  .raterow { grid-template-columns: 1.7fr 66px 66px 66px 1.3fr; }
+  .raterow .num { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .raterow.thin .big, .raterow.thin .num { opacity: .55; }  /* 樣本太少,僅供參考 */
+  .bar.wide { width: 84px; }
+  .reads { padding: 0 var(--pad); margin: 16px 0 0; }
+  .reads li { font-size: 14.5px; margin: 8px 0; max-width: 60em; }
+  .reads b { font-weight: 700; }
+
+  /* ── progress ────────────────────────────────────── */
+  #progress { display: none; padding: 34px var(--pad) 0; }
+  .eyebrow { font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase; color: var(--mute); }
+  .steps { list-style: none; margin: 16px 0 0; padding: 0; }
+  .step {
+    display: flex; align-items: baseline; gap: 14px; padding: 9px 0;
+    border-bottom: 1px solid var(--rule);
+    font-size: clamp(16px, 1.9vw, 22px); font-weight: 700; letter-spacing: -.03em;
+    color: var(--faint); transition: color .2s;
+  }
+  .step .mark { font-family: var(--mono); font-size: 11px; font-weight: 400; width: 16px; }
+  .step.done { color: var(--mute); }
+  .step.active { color: var(--fg); }
+  .step.active .mark { animation: blink 1s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .2; } }
+
+  /* ── result ──────────────────────────────────────── */
+  #result { display: none; padding-top: 60px; }
+  .kit-head {
+    display: flex; justify-content: space-between; align-items: flex-end; gap: 24px;
+    flex-wrap: wrap; padding: 0 var(--pad) 18px; border-bottom: 1px solid var(--fg);
+  }
+  .kit-head h2 { font-size: clamp(24px, 3.4vw, 40px); font-weight: 700;
+                 letter-spacing: -.038em; line-height: 1.05; margin: 8px 0 0; max-width: 18em; }
+  .kit-head .path { font-family: var(--mono); font-size: 11px; color: var(--mute);
+                    margin-top: 10px; word-break: break-all; }
+  .kit-head .row-btns { display: flex; gap: 18px; }
+  .filetabs { display: flex; gap: 26px; flex-wrap: wrap; padding: 15px var(--pad);
+              border-bottom: 1px solid var(--rule); }
+  .ftab { font-size: 14px; color: var(--mute); letter-spacing: -.01em; }
+  .ftab:hover { color: var(--fg); }
+  .ftab.active { color: var(--fg); font-weight: 700; text-decoration: underline; text-underline-offset: 4px; }
+
+  /* only the paste box is half-width; generated documents run full-bleed */
+  .doc { max-width: none; padding: 44px var(--pad) 0; animation: rise .3s ease both; }
+  .doc p, .doc li { max-width: 68em; }
+  @keyframes rise { from { opacity: 0; transform: translateY(6px); } }
+  .doc > :first-child { margin-top: 0; }
+  .doc h1 { font-size: clamp(28px, 3.6vw, 42px); font-weight: 700; letter-spacing: -.04em;
+            line-height: 1.05; margin: 0 0 12px; }
+  .doc h2 { font-size: 11px; letter-spacing: .12em; text-transform: uppercase; font-weight: 700;
+            margin: 44px 0 14px; padding-bottom: 10px; border-bottom: 1px solid var(--fg); }
+  .doc h3 { font-size: 19px; font-weight: 700; letter-spacing: -.025em; margin: 26px 0 4px; }
+  .doc p  { margin: 12px 0; color: var(--mute); letter-spacing: -.005em; line-height: 1.6; }
+  .doc ul, .doc ol { margin: 12px 0; padding-left: 20px; }
+  .doc li { margin: 8px 0; color: var(--mute); line-height: 1.55; }
+  .doc li::marker { color: var(--faint); }
+  .doc b, .doc strong { color: var(--fg); font-weight: 700; }
+  .doc a { color: var(--fg); text-decoration: underline; text-underline-offset: 3px; }
+  .doc code { font-family: var(--mono); font-size: 12.5px; background: var(--sink);
+              padding: 2px 6px; color: var(--fg); }
+  .doc table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13.5px; }
+  .doc th, .doc td { text-align: left; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--rule); }
+  .doc blockquote { border-left: 2px solid var(--fg); margin: 16px 0; padding: 4px 0 4px 18px; color: var(--mute); }
+  .doc hr { border: none; border-top: 1px solid var(--rule); margin: 30px 0; }
+
+  #error { display: none; margin: 26px var(--pad) 0; padding: 16px 20px;
+           background: var(--fg); color: var(--bg); font-size: 14px; max-width: 46em; }
+  #choices { display: none; padding-top: 40px; }
+
+  .toast {
+    position: fixed; left: var(--pad); bottom: 0; z-index: 99;
+    background: var(--fg); color: var(--bg); padding: 12px 20px;
+    font-size: 13.5px; letter-spacing: -.01em;
+    transform: translateY(100%); transition: transform .26s cubic-bezier(.2,.8,.2,1);
+  }
+  .toast.show { transform: translateY(0); }
+
+  #modeJD { padding-bottom: 40px; }
+
+  /* ── 投遞熱度 — GitHub-style daily squares, fixed bottom-right ── */
+  .heat {
+    position: fixed; right: var(--pad); bottom: var(--pad); z-index: 98;
+    background: var(--bg); color: var(--fg); border: 1px solid var(--fg);
+    padding: 12px 14px 10px; font-size: 12px;
+    transition: background .2s, color .2s;
+  }
+  .heat-head { display: flex; align-items: baseline; gap: 10px; margin-bottom: 10px; }
+  .heat-head b { font-size: 13px; font-weight: 700; letter-spacing: -.01em; }
+  .heat-head .u-meta { font-family: var(--mono); font-size: 11px; color: var(--mute); }
+  .heat-head button { margin-left: auto; padding: 0 2px; font-size: 15px; line-height: 1; color: var(--mute); }
+  .heat-head button:hover { color: var(--fg); }
+  .heat.min .heat-head { margin-bottom: 0; }
+  .heat.min .heat-body, .heat.min .heat-foot { display: none; }
+  .heat-body { display: flex; gap: 6px; }
+  .heat-days, .heat-grid { display: grid; grid-template-rows: 14px repeat(7, 14px); gap: 3px; }
+  .heat-days { font-size: 9px; line-height: 14px; color: var(--mute); }
+  .heat-grid { grid-auto-flow: column; grid-auto-columns: 14px; }
+  .heat .hm { font-size: 9px; line-height: 14px; color: var(--mute); white-space: nowrap; }
+  .hc { display: block; width: 14px; height: 14px; border-radius: 3px; background: var(--rule); }
+  /* --t (0..1, set per cell) blends within a segment, so every extra application reads darker.
+     srgb keeps every step on the pure rgb(0,0,255) axis instead of drifting purple/gray. */
+  .hc.on  { background: color-mix(in srgb, var(--h-mid) calc(var(--t) * 100%), var(--h-lo)); }
+  .hc.on2 { background: color-mix(in srgb, var(--h-hi) calc(var(--t) * 100%), var(--h-mid)); }
+  .hc.out { visibility: hidden; }
+  .hc.today, .heat-grid .hc:hover { outline: 1px solid var(--fg); outline-offset: 1px; }
+  .heat-foot { display: flex; flex-direction: column; align-items: flex-start; gap: 5px;
+               margin-top: 9px; font-size: 11px; color: var(--mute); }
+  .heat-legend { display: inline-flex; align-items: center; gap: 3px; }
+  .heat-legend .hc { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+  @media (max-width: 700px) { .heat { display: none; } }
+
+  @media (max-width: 900px) {
+    .split { grid-template-columns: 1fr; }
+    .paste { position: static; }
+    .paste textarea { height: 42vh; min-height: 220px; }
+    .jobrow { grid-template-columns: 46px 1fr 88px; }
+    .approw { grid-template-columns: 80px 1fr 130px; }
+    .jobrow > :nth-child(2), .jobrow > :nth-child(4),
+    .approw > :nth-child(2), .approw > :nth-child(4), .approw > :nth-child(6) { display: none; }
+    nav { gap: 12px; }
+    .topbar { grid-template-columns: auto 1fr; }
+    .wordmark { display: none; }
+    .rest.show { display: none; }
+  }
+
