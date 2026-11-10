@@ -5,6 +5,18 @@ const os=require('node:os');
 const path=require('node:path');
 const C=require('../core.js');
 const job=(patch={})=>({id:'test-job',company:'Example Company',title:'Product Designer',url:'https://example.com/jobs/1',location:'Taipei',workMode:'hybrid',status:'applied',appliedDate:'2026-11-09',followupDate:'',salary:'',description:'Figma and user research',notes:'First application',createdAt:C.now(),updatedAt:C.now(),history:[{status:'applied',at:C.now()}],...patch});
+test('discovered to saved to applied preserves one record and tracks progress',()=>{
+  const original=job({status:'discovered',appliedDate:'',history:[]});
+  const saved=C.transition(original,'saved');assert.equal(saved.appliedDate,'');assert.equal(C.statistics([saved]).applied,0);
+  const applied=C.transition(saved,'applied');assert.equal(applied.id,original.id);assert.equal(applied.appliedDate,C.today());assert.equal(C.statistics([applied]).applied,1);
+  const interviewed=C.transition(applied,'interview');const rejected=C.transition(interviewed,'rejected');
+  assert.equal(C.statistics([rejected]).interview,1);assert.equal(C.statistics([rejected]).interview_rate,100);assert.equal(rejected.history.length,4);
+  assert.equal(original.status,'discovered');
+});
+test('returning to discovered leaves no application date and preserves preferences',()=>{
+  const restored=C.transition(job(),'discovered');assert.equal(restored.appliedDate,'');assert.equal(C.statistics([restored]).applied,0);
+  const before={...C.emptyState(),jobs:[job({status:'saved',appliedDate:''})]};assert.deepEqual(C.validateState(before),before);
+});
 test('fresh installation has no personal defaults or records',()=>{const state=C.emptyState();assert.deepEqual(state.jobs,[]);assert.equal(state.preferences.roles,'');assert.equal(state.preferences.displayName,'');assert.equal(state.preferences.workMode,'any');assert.deepEqual(C.validateState(state),state);});
 test('full backup round trip keeps dates, Unicode notes and status history',()=>{const state={...C.emptyState(),preferences:{...C.emptyPreferences(),roles:'產品設計師'},jobs:[job({notes:'面試準備\n作品集 <script>test</script>'})]};assert.deepEqual(C.validateState(JSON.parse(JSON.stringify(state))),state);});
 test('invalid backup cannot silently replace valid jobs',()=>{assert.throws(()=>C.validateState({...C.emptyState(),schemaVersion:2}));assert.throws(()=>C.validateState({...C.emptyState(),jobs:[job(),job()]}));assert.throws(()=>C.validateJob(job({status:'__proto__'})));assert.throws(()=>C.validateJob(job({appliedDate:'2026-02-30'})));assert.throws(()=>C.validateJob(job({appliedDate:''})));assert.throws(()=>C.validateJob(job({history:[{status:'constructor',at:C.now()}]})));});

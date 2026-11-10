@@ -12,42 +12,11 @@
   <script src="app.js" defer></script>
 </head>
 <body>
-  <header class="community-top">
-    <a class="brand" href="#overview">JOB HUNTER <span>COMMUNITY</span></a>
-    <div class="top-actions"><span class="local-indicator">僅存在此瀏覽器</span><button id="themeToggle" class="quiet" aria-label="切換深淺色">深色模式</button></div>
-  </header>
-  <main>
-    <section class="hero">
-      <div><p class="eyebrow">YOUR NEXT CHAPTER</p><h1>下一站，<br><span>由你決定。</span></h1></div>
-      <div class="hero-aside"><p>把期待寫清楚，把每次投遞記下來。<br>一個屬於你的求職工作台。</p><button class="primary" id="heroAdd">＋ 記錄一份工作</button></div>
-    </section>
-    <div id="persistentWarning" class="notice danger" role="alert" hidden></div>
-    <div id="welcome" class="notice"><span>第一次使用？先設定你想找的工作。這裡沒有任何預載個人資料。</span><button data-tab="preferences" class="text-button">設定偏好 ↗</button></div>
-    <nav class="community-nav" aria-label="主要導覽">
-      <button data-tab="overview" class="active" aria-current="page">總覽</button>
-      <button data-tab="jobs">工作紀錄 <span id="jobCount">0</span></button>
-      <button data-tab="preferences">我的偏好</button>
-      <button data-tab="backup">備份與使用說明</button>
-    </nav>
-
-    <section id="overview" class="view" aria-label="總覽">
-      <div class="metrics" id="metrics"></div>
-      <div class="overview-grid">
-        <section class="panel"><div class="section-head"><h2>求職方向</h2><button data-tab="preferences" class="text-button">編輯 ↗</button></div><div id="preferenceSummary"></div><div id="searchLinks" class="search-links"></div></section>
-        <section class="panel"><div class="section-head"><h2>近期紀錄</h2><button data-tab="jobs" class="text-button">查看全部 ↗</button></div><div id="recentJobs"></div></section>
-      </div>
-      <section class="panel"><div class="section-head"><h2>每一步，都算數。</h2><span class="muted">最近 12 週投遞</span></div><div id="activity" class="activity" aria-label="投遞活動"></div><p class="muted small" id="activityCaption"></p></section>
-    </section>
-
-    <section id="jobs" class="view" hidden aria-label="工作紀錄">
-      <div class="section-head"><div><h2>我關注的工作</h2><p class="muted">從「想投」到「收到 Offer」，保留每一次進展。</p></div><button class="primary" id="addJob">＋ 新增工作</button></div>
-      <div class="filters"><label class="grow">搜尋<input id="jobSearch" type="search" placeholder="公司、職稱、地點或筆記"></label><label>進度<select id="statusFilter"><option value="all">全部進度</option></select></label><label>排序<select id="jobSort"><option value="updated">最近更新</option><option value="applied">投遞日期</option><option value="match">偏好符合度</option><option value="followup">追蹤日期</option></select></label></div>
-      <p class="small muted">符合度依你設定的職稱、地點、關鍵字與排除條件計算，僅供整理紀錄，不代表面試機率。</p>
-      <div id="jobList" class="job-list"></div>
-    </section>
-
-    <section id="preferences" class="view" hidden aria-label="我的偏好">
-      <div class="section-head"><div><p class="eyebrow">MAKE IT YOURS</p><h2>想找什麼樣的下一站？</h2><p class="muted">每次按下儲存都會更新瀏覽器資料；已連結檔案時，也會覆寫同一份 preference.json。</p></div></div>
+<div class="topbar"><div class="toggle"><button id="tLight">Light</button><button id="tDark">Dark</button></div><div class="wordmark">JOB HUNTER</div><div class="topright"><span class="idle">資料僅存於此瀏覽器</span><button data-tab="backup">備份 / 還原</button></div></div>
+<nav aria-label="主要導覽"><button class="tab" data-tab="preferences">Preference</button><button class="tab active" data-tab="find">職缺</button><button class="tab" data-tab="save">待投<span class="num" id="chipSave"></span></button><button class="tab" data-tab="log">紀錄<span class="num" id="chipApps"></span></button><button class="tab" data-tab="stats">統計</button></nav>
+<div id="persistentWarning" class="notice danger" role="alert" hidden></div>
+    <section id="preferences" class="pane view" hidden aria-label="我的偏好">
+      <div class="section-head"><div><h2>Preference 設定</h2><p class="muted">每次按下儲存都會更新瀏覽器資料；已連結檔案時，也會覆寫同一份 preference.json。</p></div></div>
       <form id="preferenceForm">
         <div class="form-grid">
           <label>稱呼（選填）<input name="displayName" maxlength="100" autocomplete="off" placeholder="你想被怎麼稱呼"></label>
@@ -68,14 +37,33 @@
       <section class="panel file-panel"><h3>你的 preference.json</h3><p>可直接匯入既有的偏好檔，或建立一份空白格式。連結本機檔案後，每次儲存偏好都會更新同一個檔案。</p><div class="button-row"><button id="linkPreference" class="secondary">建立／連結本機檔案</button><button id="resumePreference" class="secondary" hidden>重新授權寫入</button><button id="unlinkPreference" class="quiet" hidden>解除連結</button><button id="downloadPreference" class="secondary">下載 preference.json</button><button id="downloadPreferenceMd" class="quiet">下載可閱讀的 Markdown</button><button id="importPreference" class="quiet">匯入偏好檔</button></div><p id="fileStatus" class="small muted" aria-live="polite"></p><p class="small muted">本機檔案由此頁面儲存時更新；在其他編輯器改檔後，請用「匯入偏好檔」重新載入。此功能不會寫入 GitHub。</p></section>
     </section>
 
-    <section id="backup" class="view" hidden aria-label="備份與使用說明">
+
+<section class="pane flush view" id="find"><div class="toolbar"><input id="jobSearch" type="search" aria-label="搜尋職缺" placeholder="搜尋公司或職稱…"><button class="link" id="rankJobs">依偏好排名</button><button class="link" id="addJob">＋ 新增職缺</button><span id="searchLinks"></span></div><div class="updated">依自己的 Preference 整理職缺。可手動加入職缺，或透過搜尋連結找工作；符合度不是面試機率。</div><div class="listhead"><b>職缺清單</b><span class="u-meta" id="findCount"></span></div><div class="sheet"><div class="row head jobrow"><div>符合度</div><div>公司</div><div>職稱</div><div>地點</div><div>進度</div><div>動作</div></div><div id="jobRows"></div></div></section>
+<section class="pane flush view" id="save" hidden><div class="toolbar"><span class="eyebrow" id="saveHint">之後要投的職缺</span><button class="link" id="addSaved">＋ 新增待投</button></div><div class="addgrid url-entry"><input id="saveUrl" type="url" aria-label="待投職缺網址" placeholder="貼職缺網址，存起來之後投"><button class="cta" id="saveUrlButton">存起來</button></div><div class="sheet"><div id="saveRows"></div></div></section>
+<section class="pane flush view" id="log" hidden><div class="funnel" id="funnel"></div><div class="toolbar"><span class="eyebrow" id="appScope">我投過的工作</span><input id="logSearch" type="search" aria-label="搜尋投遞紀錄" placeholder="搜尋公司、職稱或筆記"><button class="link" id="addApplied">＋ 手動新增一筆</button></div><div class="sheet"><div class="row head approw"><div>投遞日</div><div>公司</div><div>職稱</div><div>地點</div><div>進度</div><div></div></div><div id="appRows"></div></div></section>
+<section class="pane flush view" id="stats" hidden><div class="funnel" id="statTotals"></div><div class="block"><h3>投遞流向</h3><div class="sankey" id="sankey"></div><p class="note" id="sankeyNote"></p></div><div class="block"><h3>哪種工作通過率高</h3><div id="rates"></div></div><div class="block"><h3>看出來的事</h3><ul class="reads" id="reads"></ul></div></section>
+    <section id="backup" class="pane view" hidden aria-label="備份與使用說明">
       <div class="section-head"><div><p class="eyebrow">YOUR DATA, YOUR COPY</p><h2>帶著紀錄，繼續往前。</h2></div></div>
       <div class="overview-grid"><section class="panel"><h3>備份全部資料</h3><p>包含偏好、工作紀錄、筆記與進度歷程。換電腦或瀏覽器時，下載 JSON 備份後再匯入即可。</p><div class="button-row"><button id="exportBackup" class="primary">下載完整備份</button><button id="importBackup" class="secondary">還原備份</button><button id="exportCsv" class="quiet">匯出紀錄 CSV</button></div><p class="small muted" id="backupStatus"></p></section><section class="panel"><h3>每個人有自己的工作台</h3><p>網站程式可以公開分享；你輸入的內容只保存在目前的瀏覽器，不會傳到 GitHub 或其他人的電腦。</p><p>使用同一台電腦、同一個瀏覽器設定檔的人會共用這份紀錄。請用各自的瀏覽器設定檔。清除網站資料或結束無痕模式可能會刪除紀錄，記得定期備份。</p></section></div>
-      <section class="panel"><h3>怎麼開始？</h3><ol class="instructions"><li>到「我的偏好」填寫自己的條件，按下儲存。</li><li>到「工作紀錄」新增公司、職稱、職缺網址與投遞狀態。</li><li>隨時更新面試進度、追蹤日期與筆記。</li><li>需要持續更新偏好檔時，連結 preference.json；工作紀錄請另外下載完整備份。</li></ol><p>這是可直接放上 GitHub Pages 的獨立版本。提供偏好、手動投遞紀錄、職缺搜尋連結與本機備份；不會執行原版的背景爬取、AI 履歷產生或通知服務。</p><p>偏好檔直接覆寫需要支援 File System Access API 的瀏覽器（例如桌面 Chrome／Edge），以及使用者授權。不支援時仍可下載、匯入使用。</p></section>
+      <section class="panel"><h3>怎麼開始？</h3><ol class="instructions"><li>到「Preference」填寫自己的條件，按下儲存。</li><li>從「職缺」加入工作，在「待投」安排投遞，再到「紀錄」更新進度。</li><li>隨時更新面試進度、追蹤日期與筆記。</li><li>需要持續更新偏好檔時，連結 preference.json；工作紀錄請另外下載完整備份。</li></ol><p>這是可直接放上 GitHub Pages 的獨立版本。提供偏好、手動投遞紀錄、職缺搜尋連結與本機備份；不會執行原版的背景爬取、AI 履歷產生或通知服務。</p><p>偏好檔直接覆寫需要支援 File System Access API 的瀏覽器（例如桌面 Chrome／Edge），以及使用者授權。不支援時仍可下載、匯入使用。</p></section>
       <section class="panel danger-zone"><h3>清除這個版本的資料</h3><p>只清除此網站的偏好與工作紀錄。已下載的檔案不受影響。</p><button id="resetData" class="secondary">清除本機資料…</button></section>
     </section>
-    <footer><span>JOB HUNTER / COMMUNITY EDITION</span><span>從空白開始，記錄自己的方向。</span></footer>
-  </main>
+
+<aside class="heat" id="heat" aria-label="每日投遞熱度">
+  <div class="heat-head">
+    <b>投遞熱度</b><span class="u-meta" id="heatSum"></span>
+    <button id="heatMin" onclick="toggleHeat()" title="收合">–</button>
+  </div>
+  <div class="heat-body">
+    <div class="heat-days"><span></span><span></span><span>一</span><span></span><span>三</span><span></span><span>五</span><span></span></div>
+    <div class="heat-grid" id="heatGrid"></div>
+  </div>
+  <div class="heat-foot">
+    <span id="heatCap"></span>
+    <span class="heat-legend">少 <i class="hc"></i><i class="hc on" style="--t:0"></i><i class="hc on" style="--t:.5"></i><i class="hc on" style="--t:1"></i><i class="hc on2" style="--t:1"></i> 多</span>
+  </div>
+</aside>
+
 
   <dialog id="jobDialog" aria-labelledby="jobDialogTitle"><form id="jobForm"><div class="section-head"><h2 id="jobDialogTitle">新增工作</h2><button type="button" id="closeJob" class="quiet" aria-label="關閉">✕</button></div><input type="hidden" name="id"><div class="form-grid">
     <label>公司 *<input name="company" required maxlength="200"></label><label>職稱 *<input name="title" required maxlength="300"></label>
@@ -89,5 +77,5 @@
   </div><div class="save-bar"><button type="submit" class="primary">儲存工作</button><button type="button" id="deleteJob" class="quiet danger-text" hidden>刪除這筆紀錄</button></div></form></dialog>
   <input id="fileInput" type="file" accept=".json,application/json" hidden>
   <div id="message" role="status" aria-live="polite" hidden></div>
-</body>
-</html>
+
+</body></html>

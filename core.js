@@ -5,7 +5,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function () {
   'use strict';
   const VERSION = 1;
-  const STATUS = Object.freeze({saved:'待投遞',applied:'已投遞',screening:'履歷篩選',interview:'一面',interview2:'二面',offer:'收到 Offer',rejected:'未錄取',withdrawn:'已撤回'});
+  const STATUS = Object.freeze({discovered:'未投遞',saved:'待投遞',applied:'已投遞',screening:'履歷篩選',interview:'一面',interview2:'二面',offer:'收到 Offer',rejected:'未錄取',withdrawn:'已撤回'});
   const KEY = 'job-hunter-community:v1:';
   const PREF_FIELDS = ['displayName','roles','locations','workMode','companies','seniority','salaryMin','currency','keywords','exclude','authorization','notes'];
   const JOB_FIELDS = ['id','company','title','url','location','workMode','status','appliedDate','followupDate','salary','description','notes','createdAt','updatedAt'];
@@ -98,5 +98,18 @@
     catch(error) { try { await stream.abort(); } catch {} throw error; }
     return {written:true};
   }
-  return {VERSION,STATUS,KEY,PREF_FIELDS,JOB_FIELDS,tokens,today,now,safeUrl,emptyPreferences,emptyState,validatePreferences,validateJob,validateState,preferenceDocument,readPreferenceDocument,match,csv,markdown,writePreferences};
+  function transition(job,status) {
+    const at=now();
+    return validateJob({...job,status,updatedAt:at,appliedDate:['discovered','saved'].includes(status)?'':job.appliedDate||today(),history:job.status===status?job.history:[...job.history,{status,at}]});
+  }
+  function statistics(jobs) {
+    const applied=jobs.filter(j=>j.appliedDate);
+    const reached=(j,states)=>states.includes(j.status)||(j.history||[]).some(h=>states.includes(h.status));
+    const interview=applied.filter(j=>reached(j,['interview','interview2','offer'])).length;
+    const responded=applied.filter(j=>reached(j,['screening','interview','interview2','offer','rejected'])).length;
+    const offer=applied.filter(j=>reached(j,['offer'])).length;
+    const rate=n=>applied.length?Math.round(100*n/applied.length):0;
+    return {applied:applied.length,responded,interview,interview2:applied.filter(j=>reached(j,['interview2','offer'])).length,offer,response_rate:rate(responded),interview_rate:rate(interview),offer_rate:rate(offer)};
+  }
+  return {VERSION,STATUS,KEY,PREF_FIELDS,JOB_FIELDS,tokens,today,now,safeUrl,emptyPreferences,emptyState,validatePreferences,validateJob,validateState,preferenceDocument,readPreferenceDocument,match,csv,markdown,writePreferences,transition,statistics};
 });
