@@ -9,7 +9,8 @@ execFileSync(process.execPath,['--test',path.join(root,'tests/core.test.cjs')],{
 function api(endpoint,method='GET',data){
   const args=['api',`repos/${repo}/${endpoint}`,'--method',method];
   if(data)args.push('--input','-');
-  return JSON.parse(execFileSync('gh',args,{input:data?JSON.stringify(data):undefined,encoding:'utf8'}));
+  const response=execFileSync('gh',args,{input:data?JSON.stringify(data):undefined,encoding:'utf8'});
+  return response.trim()?JSON.parse(response):null;
 }
 function optional(endpoint){try{return api(endpoint);}catch(e){if(String(e.stderr).includes('HTTP 404'))return null;throw e;}}
 const files=['index.html','base.css','community.css','core.js','app.js','icon.svg','preference.example.json','.nojekyll'];
