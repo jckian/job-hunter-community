@@ -4,7 +4,7 @@ const fs=require('node:fs/promises');
 const os=require('node:os');
 const path=require('node:path');
 const C=require('../core.js');
-const job=(patch={})=>({id:'test-job',company:'Example Company',title:'Product Designer',url:'https://example.com/jobs/1',location:'Taipei',workMode:'hybrid',status:'applied',appliedDate:'2026-11-09',followupDate:'',salary:'',description:'Figma and user research',notes:'First application',createdAt:C.now(),updatedAt:C.now(),history:[{status:'applied',at:C.now()}],...patch});
+const job=(patch={})=>({id:'test-job',company:'Example Company',title:'Product Designer',url:'https://example.com/jobs/1',location:'Taipei',workMode:'hybrid',status:'applied',appliedDate:'2026-11-09',followupDate:'',salary:'',description:'Figma and user research',notes:'First application',createdAt:C.now(),updatedAt:C.now(),source:'',sourceId:'',fetchedAt:'',postedAt:'',salaryMinimum:'',salaryMaximum:'',salaryCurrency:'',history:[{status:'applied',at:C.now()}],...patch});
 test('discovered to saved to applied preserves one record and tracks progress',()=>{
   const original=job({status:'discovered',appliedDate:'',history:[]});
   const saved=C.transition(original,'saved');assert.equal(saved.appliedDate,'');assert.equal(C.statistics([saved]).applied,0);

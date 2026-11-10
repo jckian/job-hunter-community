@@ -5,7 +5,7 @@ const {execFileSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..');
 const repo=process.argv[2];
 if(!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo||''))throw new Error('Usage: npm run publish:pages -- OWNER/REPOSITORY');
-execFileSync(process.execPath,['--test',path.join(root,'tests/core.test.cjs')],{stdio:'inherit',cwd:root});
+execFileSync(process.execPath,['--test',...fs.readdirSync(path.join(root,'tests')).filter(x=>x.endsWith('.test.cjs')).map(x=>path.join(root,'tests',x))],{stdio:'inherit',cwd:root});
 function api(endpoint,method='GET',data){
   const args=['api',`repos/${repo}/${endpoint}`,'--method',method];
   if(data)args.push('--input','-');
@@ -13,7 +13,7 @@ function api(endpoint,method='GET',data){
   return response.trim()?JSON.parse(response):null;
 }
 function optional(endpoint){try{return api(endpoint);}catch(e){if(String(e.stderr).includes('HTTP 404'))return null;throw e;}}
-const files=['index.html','base.css','community.css','core.js','app.js','icon.svg','preference.example.json','.nojekyll'];
+const files=['index.html','base.css','community.css','core.js','app.js','scanner.js','scan-ui.js','icon.svg','preference.example.json','.nojekyll'];
 const tree=api('git/trees','POST',{tree:files.map(file=>({path:file,mode:'100644',type:'blob',content:fs.readFileSync(path.join(root,file),'utf8')}))});
 const previous=optional('git/ref/heads/gh-pages');
 const commit=api('git/commits','POST',{message:'Publish community site',tree:tree.sha,parents:previous?[previous.object.sha]:[]});

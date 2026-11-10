@@ -7,8 +7,8 @@
   const VERSION = 1;
   const STATUS = Object.freeze({discovered:'未投遞',saved:'待投遞',applied:'已投遞',screening:'履歷篩選',interview:'一面',interview2:'二面',offer:'收到 Offer',rejected:'未錄取',withdrawn:'已撤回'});
   const KEY = 'job-hunter-community:v1:';
-  const PREF_FIELDS = ['displayName','roles','locations','workMode','companies','seniority','salaryMin','currency','keywords','exclude','authorization','notes'];
-  const JOB_FIELDS = ['id','company','title','url','location','workMode','status','appliedDate','followupDate','salary','description','notes','createdAt','updatedAt'];
+  const PREF_FIELDS = ['displayName','roles','locations','workMode','companies','seniority','salaryMin','currency','keywords','exclude','authorization','notes','scanSchedule','scanCatalog','scanSources'];
+  const JOB_FIELDS = ['id','company','title','url','location','workMode','status','appliedDate','followupDate','salary','description','notes','createdAt','updatedAt','source','sourceId','fetchedAt','postedAt','salaryMinimum','salaryMaximum','salaryCurrency'];
   const modes = ['any','remote','hybrid','onsite'];
   const text = (v,max=30000) => typeof v === 'string' ? v.slice(0,max) : '';
   const tokens = v => text(v).split(/[,，、\n;]/u).map(x=>x.trim()).filter(Boolean);
@@ -27,7 +27,7 @@
     try { const u = new URL(value); return ['http:','https:'].includes(u.protocol) && !u.username && !u.password ? u.href : ''; } catch { return ''; }
   }
   function emptyPreferences() {
-    return Object.fromEntries(PREF_FIELDS.map(k=>[k,k==='workMode'?'any':'']));
+    return Object.fromEntries(PREF_FIELDS.map(k=>[k,k==='workMode'?'any':k==='scanSchedule'?'auto':k==='scanCatalog'?'default':'']));
   }
   function validatePreferences(p) {
     if (!p || typeof p !== 'object' || Array.isArray(p)) throw new Error('偏好內容格式不正確');
@@ -37,6 +37,7 @@
       out[key] = p[key]===undefined ? out[key] : String(p[key]).trim().slice(0,8000);
     }
     if (!modes.includes(out.workMode)) throw new Error('工作型態不正確');
+    if (!['auto','manual'].includes(out.scanSchedule) || !['default','custom'].includes(out.scanCatalog)) throw new Error('掃描設定不正確');
     if (out.salaryMin && (!/^\d+$/.test(out.salaryMin) || Number(out.salaryMin)>1e9)) throw new Error('期望年薪請填入非負整數');
     return out;
   }
@@ -87,7 +88,7 @@
     return '\ufeff'+rows.map(r=>r.map(cell).join(',')).join('\r\n');
   }
   function markdown(p) {
-    const labels=['稱呼','目標職稱','工作地點','工作型態','偏好公司／產業','資歷','最低期望年薪','幣別','技能／關鍵字','排除條件','工作許可／簽證','其他偏好'];
+    const labels=['稱呼','目標職稱','工作地點','工作型態','偏好公司／產業','資歷','最低期望年薪','幣別','技能／關鍵字','排除條件','工作許可／簽證','其他偏好','自動掃描','掃描來源模式','自訂職涯頁'];
     return '# 求職偏好\n\n'+PREF_FIELDS.map((k,i)=>`## ${labels[i]}\n\n${p[k] || '未設定'}\n`).join('\n');
   }
   async function writePreferences(handle, preferences) {

@@ -19,7 +19,10 @@ function save(next) {
     if (!canWrite) throw new Error('目前無法安全寫入，請檢查上方提示');
     if (localStorage.getItem(storageKey)!==lastStoredRaw) throw new Error('另一個分頁已更新資料，請重新整理後再編輯');
     const valid=C.validateState(next), raw=JSON.stringify(valid);
-    localStorage.setItem(storageKey,raw); lastStoredRaw=raw; state=valid; return true;
+    const preferencesChanged=JSON.stringify(valid.preferences)!==JSON.stringify(state.preferences)||valid.preferencesUpdatedAt!==state.preferencesUpdatedAt;
+    localStorage.setItem(storageKey,raw); lastStoredRaw=raw; state=valid;
+    if(preferencesChanged)Promise.resolve().then(()=>window.preferenceChanged?.());
+    return true;
   } catch (e) { warning('未儲存：'+e.message+'。請下載備份，避免遺失資料。'); notify('儲存失敗：'+e.message); return false; }
 }
 window.addEventListener('storage',e=>{ if (e.key===storageKey) warning('另一個分頁已變更這份資料。請重新整理後再編輯，避免覆蓋新內容。'); });
@@ -54,13 +57,13 @@ function render() {
   renderJobs();renderLog();renderStats();renderHeat(applied.map(j=>({...j,applied_date:j.appliedDate})));
 }
 function jobRow(j) {
-  const m=C.match(j,state.preferences),url=C.safeUrl(j.url);
-  return `<div class="row jobrow"><div class="score" title="${esc(m.excluded.length?'排除條件：'+m.excluded.join('、'):'依設定的職稱、地點、技能與工作型態比對')}">${m.score??'–'}</div><div class="sub">${esc(j.company)}</div><div class="big">${url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(j.title)}</a>`:esc(j.title)}</div><div class="tags">${esc(j.location||'—')}</div><div class="tags">${C.STATUS[j.status]}</div><div class="rowbtns"><button class="act" data-edit="${esc(j.id)}">編輯</button>${j.status==='discovered'?`<button class="act" data-move="${esc(j.id)}" data-status="saved">＋ 待投</button>`:''}${j.status==='saved'?`<button class="act" data-move="${esc(j.id)}" data-status="applied">✓ 已投遞</button><button class="x" data-move="${esc(j.id)}" data-status="discovered" title="移出待投">✕</button>`:''}</div></div>`;
+  const m=j.source?JobScanner.assess(j,state.preferences):C.match(j,state.preferences),url=C.safeUrl(j.url);
+  return `<div class="row jobrow"><div class="score" title="${esc(m.excluded.length?'排除條件：'+m.excluded.join('、'):'依設定的職稱、地點、技能與工作型態比對')}">${m.score??'–'}</div><div class="sub">${esc(j.company)}</div><div class="big">${url?`<a href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(j.title)}</a>`:esc(j.title)}</div><div class="tags">${esc(j.location||'—')}</div><div class="tags">${C.STATUS[j.status]}${j.source?`<small class="job-source">來源：${esc(j.source)}</small>`:''}</div><div class="rowbtns"><button class="act" data-edit="${esc(j.id)}">編輯</button>${j.status==='discovered'?`<button class="act" data-move="${esc(j.id)}" data-status="saved">＋ 待投</button>`:''}${j.status==='saved'?`<button class="act" data-move="${esc(j.id)}" data-status="applied">✓ 已投遞</button><button class="x" data-move="${esc(j.id)}" data-status="discovered" title="移出待投">✕</button>`:''}</div></div>`;
 }
 function renderJobs() {
   const q=$('jobSearch').value.trim().toLocaleLowerCase();
-  const jobs=state.jobs.filter(j=>[j.company,j.title,j.location,j.notes].join(' ').toLocaleLowerCase().includes(q));
-  jobs.sort((a,b)=>ranked?(C.match(b,state.preferences).score??-1)-(C.match(a,state.preferences).score??-1):b.updatedAt.localeCompare(a.updatedAt));
+  const jobs=state.jobs.filter(j=>(!j.source||j.status!=='discovered'||JobScanner.assess(j,state.preferences).eligible)&&[j.company,j.title,j.location,j.notes].join(' ').toLocaleLowerCase().includes(q));
+  jobs.sort((a,b)=>ranked?((b.source?JobScanner.assess(b,state.preferences):C.match(b,state.preferences)).score??-1)-((a.source?JobScanner.assess(a,state.preferences):C.match(a,state.preferences)).score??-1):b.updatedAt.localeCompare(a.updatedAt));
   $('rankJobs').textContent=ranked?'依偏好排名 ↓':'最近更新 ↓';
   $('findCount').textContent=jobs.length+' 個職缺';
   $('jobRows').innerHTML=jobs.map(jobRow).join('')||'<div class="empty"><b>還沒有符合條件的職缺</b><br>按「新增職缺」開始整理自己的清單。</div>';
@@ -122,7 +125,7 @@ $('jobForm').onsubmit=e=>{
     if(duplicate&&!confirm('已有相同網址或公司職稱的紀錄，仍要儲存這筆嗎？'))return;
     const history=[...(old?.history||[])]; if(!old||old.status!==data.status)history.push({status:data.status,at:time});
     const id=old?.id||(crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2));
-    const job=C.validateJob({...data,url,id,createdAt:old?.createdAt||time,updatedAt:time,history});
+    const job=C.validateJob({...old,...data,url,id,createdAt:old?.createdAt||time,updatedAt:time,history});
     if(save({...state,jobs:[...state.jobs.filter(j=>j.id!==id),job]})){ $('jobDialog').close();render();notify('工作紀錄已儲存'); }
   }catch(error){notify(error.message);}
 };
