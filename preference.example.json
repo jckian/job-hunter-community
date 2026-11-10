@@ -1,0 +1,19 @@
+{
+  "type": "job-hunter-preferences",
+  "schemaVersion": 1,
+  "updatedAt": "",
+  "preferences": {
+    "displayName": "",
+    "roles": "",
+    "locations": "",
+    "workMode": "any",
+    "companies": "",
+    "seniority": "",
+    "salaryMin": "",
+    "currency": "",
+    "keywords": "",
+    "exclude": "",
+    "authorization": "",
+    "notes": ""
+  }
+}
