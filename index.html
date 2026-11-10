@@ -9,10 +9,12 @@
   <link rel="stylesheet" href="base.css">
   <link rel="stylesheet" href="community.css">
   <script src="core.js" defer></script>
+  <script src="scanner.js" defer></script>
   <script src="app.js" defer></script>
+  <script src="scan-ui.js" defer></script>
 </head>
 <body>
-<div class="topbar"><div class="toggle"><button id="tLight">Light</button><button id="tDark">Dark</button></div><div class="wordmark">JOB HUNTER</div><div class="topright"><span class="idle">資料僅存於此瀏覽器</span><button data-tab="backup">備份 / 還原</button></div></div>
+<div class="topbar"><div class="toggle"><button id="tLight">Light</button><button id="tDark">Dark</button></div><div class="wordmark">JOB HUNTER</div><div class="topright"><span class="idle">資料僅存於此瀏覽器</span><button id="scanBtn">立刻掃描 →</button> <button data-tab="backup">備份 / 還原</button></div></div>
 <nav aria-label="主要導覽"><button class="tab" data-tab="preferences">Preference</button><button class="tab active" data-tab="find">職缺</button><button class="tab" data-tab="save">待投<span class="num" id="chipSave"></span></button><button class="tab" data-tab="log">紀錄<span class="num" id="chipApps"></span></button><button class="tab" data-tab="stats">統計</button></nav>
 <div id="persistentWarning" class="notice danger" role="alert" hidden></div>
     <section id="preferences" class="pane view" hidden aria-label="我的偏好">
@@ -30,6 +32,10 @@
           <label>想用到的技能／關鍵字<textarea name="keywords" rows="3" maxlength="4000" placeholder="如：Figma、React、使用者研究"></textarea></label>
           <label>不考慮的條件<textarea name="exclude" rows="3" maxlength="4000" placeholder="如：實習、輪班（會比對職稱與工作說明）"></textarea></label>
           <label>工作許可／簽證需求<input name="authorization" maxlength="2000" placeholder="選填，僅記錄，不自動推定職缺是否符合"></label>
+          <label>自動掃描<select name="scanSchedule"><option value="auto">儲存偏好後掃描，網頁開啟時每 6 小時更新</option><option value="manual">僅手動掃描</option></select></label>
+          <label>掃描範圍<select name="scanCatalog"><option value="default">內建公開來源＋自己的職涯頁</option><option value="custom">只掃描自己的職涯頁</option></select></label>
+          <label class="full">自己的公司職涯頁（每行一個，選填）<textarea name="scanSources" rows="3" maxlength="8000" placeholder="https://job-boards.greenhouse.io/公司代號&#10;https://jobs.ashbyhq.com/公司代號"></textarea><span class="field-help">可貼 Greenhouse 或 Ashby 的公司職涯頁／職缺連結，最多 20 個。公司名稱與產業欄用於排序；擴增搜尋範圍請在這裡加入職涯頁。</span></label>
+          <div class="full small">內建來源：Remotive（遠端、資料延遲約 24 小時）、Arbeitnow（歐洲近期前 300 筆），以及 Stripe、Airbnb、Figma、Notion 的公開職涯頁。這些是起始搜尋範圍，不代表你的偏好，也不是全網職缺搜尋。關閉網頁後不會背景執行。</div>
           <label>其他偏好<textarea name="notes" rows="3" maxlength="8000" placeholder="生活安排、公司文化、你在意的事…"></textarea></label>
         </div>
         <div class="save-bar"><button class="primary" type="submit">儲存偏好</button><span id="preferenceSaved" class="muted small" aria-live="polite"></span></div>
@@ -38,14 +44,14 @@
     </section>
 
 
-<section class="pane flush view" id="find"><div class="toolbar"><input id="jobSearch" type="search" aria-label="搜尋職缺" placeholder="搜尋公司或職稱…"><button class="link" id="rankJobs">依偏好排名</button><button class="link" id="addJob">＋ 新增職缺</button><span id="searchLinks"></span></div><div class="updated">依自己的 Preference 整理職缺。可手動加入職缺，或透過搜尋連結找工作；符合度不是面試機率。</div><div class="listhead"><b>職缺清單</b><span class="u-meta" id="findCount"></span></div><div class="sheet"><div class="row head jobrow"><div>符合度</div><div>公司</div><div>職稱</div><div>地點</div><div>進度</div><div>動作</div></div><div id="jobRows"></div></div></section>
+<section class="pane flush view" id="find"><div class="toolbar"><input id="jobSearch" type="search" aria-label="搜尋職缺" placeholder="搜尋公司或職稱…"><button class="link" id="rankJobs">依偏好排名</button><button class="link" id="addJob">＋ 新增職缺</button><span id="searchLinks"></span></div><div class="updated">依 Preference 掃描並排序新職缺；符合度不是面試機率。職稱／地點／工作型態與排除條件用於篩選，公司／技能／資歷用於排序。薪資缺漏、不同幣別與簽證需求請核對原文。</div><div class="scan-report"><span id="scanStatus" role="status" aria-live="polite"></span> <button id="cancelScan" class="link" hidden>取消掃描</button><details id="scanResultDetails" hidden><summary>各來源結果與搜尋範圍</summary><ul id="scanDetails"></ul></details><p class="small">公開來源：<a href="https://remotive.com" target="_blank" rel="noopener noreferrer">Remotive</a> · <a href="https://www.arbeitnow.com" target="_blank" rel="noopener noreferrer">Arbeitnow</a> · 各公司職涯頁。來源快取 6 小時，重按掃描會以最新偏好重新比對快取。</p></div><div class="listhead"><b>職缺清單</b><span class="u-meta" id="findCount"></span></div><div class="sheet"><div class="row head jobrow"><div>符合度</div><div>公司</div><div>職稱</div><div>地點</div><div>進度</div><div>動作</div></div><div id="jobRows"></div></div></section>
 <section class="pane flush view" id="save" hidden><div class="toolbar"><span class="eyebrow" id="saveHint">之後要投的職缺</span><button class="link" id="addSaved">＋ 新增待投</button></div><div class="addgrid url-entry"><input id="saveUrl" type="url" aria-label="待投職缺網址" placeholder="貼職缺網址，存起來之後投"><button class="cta" id="saveUrlButton">存起來</button></div><div class="sheet"><div id="saveRows"></div></div></section>
 <section class="pane flush view" id="log" hidden><div class="funnel" id="funnel"></div><div class="toolbar"><span class="eyebrow" id="appScope">我投過的工作</span><input id="logSearch" type="search" aria-label="搜尋投遞紀錄" placeholder="搜尋公司、職稱或筆記"><button class="link" id="addApplied">＋ 手動新增一筆</button></div><div class="sheet"><div class="row head approw"><div>投遞日</div><div>公司</div><div>職稱</div><div>地點</div><div>進度</div><div></div></div><div id="appRows"></div></div></section>
 <section class="pane flush view" id="stats" hidden><div class="funnel" id="statTotals"></div><div class="block"><h3>投遞流向</h3><div class="sankey" id="sankey"></div><p class="note" id="sankeyNote"></p></div><div class="block"><h3>哪種工作通過率高</h3><div id="rates"></div></div><div class="block"><h3>看出來的事</h3><ul class="reads" id="reads"></ul></div></section>
     <section id="backup" class="pane view" hidden aria-label="備份與使用說明">
       <div class="section-head"><div><p class="eyebrow">YOUR DATA, YOUR COPY</p><h2>帶著紀錄，繼續往前。</h2></div></div>
       <div class="overview-grid"><section class="panel"><h3>備份全部資料</h3><p>包含偏好、工作紀錄、筆記與進度歷程。換電腦或瀏覽器時，下載 JSON 備份後再匯入即可。</p><div class="button-row"><button id="exportBackup" class="primary">下載完整備份</button><button id="importBackup" class="secondary">還原備份</button><button id="exportCsv" class="quiet">匯出紀錄 CSV</button></div><p class="small muted" id="backupStatus"></p></section><section class="panel"><h3>每個人有自己的工作台</h3><p>網站程式可以公開分享；你輸入的內容只保存在目前的瀏覽器，不會傳到 GitHub 或其他人的電腦。</p><p>使用同一台電腦、同一個瀏覽器設定檔的人會共用這份紀錄。請用各自的瀏覽器設定檔。清除網站資料或結束無痕模式可能會刪除紀錄，記得定期備份。</p></section></div>
-      <section class="panel"><h3>怎麼開始？</h3><ol class="instructions"><li>到「Preference」填寫自己的條件，按下儲存。</li><li>從「職缺」加入工作，在「待投」安排投遞，再到「紀錄」更新進度。</li><li>隨時更新面試進度、追蹤日期與筆記。</li><li>需要持續更新偏好檔時，連結 preference.json；工作紀錄請另外下載完整備份。</li></ol><p>這是可直接放上 GitHub Pages 的獨立版本。提供偏好、手動投遞紀錄、職缺搜尋連結與本機備份；不會執行原版的背景爬取、AI 履歷產生或通知服務。</p><p>偏好檔直接覆寫需要支援 File System Access API 的瀏覽器（例如桌面 Chrome／Edge），以及使用者授權。不支援時仍可下載、匯入使用。</p></section>
+      <section class="panel"><h3>怎麼開始？</h3><ol class="instructions"><li>到「Preference」填寫自己的條件，按下儲存。</li><li>從「職缺」加入工作，在「待投」安排投遞，再到「紀錄」更新進度。</li><li>隨時更新面試進度、追蹤日期與筆記。</li><li>需要持續更新偏好檔時，連結 preference.json；工作紀錄請另外下載完整備份。</li></ol><p>這是可直接放上 GitHub Pages 的獨立版本。提供依 Preference 掃描公開職缺、投遞紀錄與本機備份。掃描在網頁開啟時執行，不需金鑰；不含 AI 履歷生成或外部通知服務。</p><p>偏好檔直接覆寫需要支援 File System Access API 的瀏覽器（例如桌面 Chrome／Edge），以及使用者授權。不支援時仍可下載、匯入使用。</p></section>
       <section class="panel danger-zone"><h3>清除這個版本的資料</h3><p>只清除此網站的偏好與工作紀錄。已下載的檔案不受影響。</p><button id="resetData" class="secondary">清除本機資料…</button></section>
     </section>
 
