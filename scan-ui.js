@@ -3,7 +3,7 @@ const S=JobScanner,feedCache=S.createCache(window.indexedDB);
 const scanKey=storageKey+':scan';
 let scanRunning=false,scanController=null,pendingPreferenceScan=false,lastScan=null;
 try{lastScan=JSON.parse(localStorage.getItem(scanKey)||'null');}catch{}
-function scanSignature(){return JSON.stringify(state.preferences);}
+function scanSignature(){return JSON.stringify([2,state.preferences]);}
 function writeScanReport(report){lastScan=report;try{localStorage.setItem(scanKey,JSON.stringify(report));}catch{}showScanReport();}
 function showScanReport(){
   if(!lastScan){$('scanStatus').textContent='設定 Preference 後自動掃描。也可按「立刻掃描」。';return;}
