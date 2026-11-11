@@ -16,10 +16,12 @@
 
 ## 依 Preference 自動掃描
 
+「職缺」提供 Glassdoor、Indeed、LinkedIn 與 Google 外部搜尋入口，帶入第一個目標職稱（沒有時用第一個技能）與第一個地點；遠端偏好也會帶入。Glassdoor 的地點併入關鍵字，請在外站確認地點篩選。未設定偏好時仍可開啟各平台。這些入口不計入 17 個自動掃描來源；外站結果需複製職缺網址，透過「＋ 新增職缺」保存。
+
 - 填寫至少一個目標職稱或技能關鍵字。儲存 Preference 後，預設立即讀取公開來源並在瀏覽器內篩選。
 - 開啟頁面時，若上次掃描已超過 6 小時會更新。頁面開啟期間每分鐘檢查是否到期；關閉網頁不會背景執行。可在設定中改為僅手動掃描。
 - 右上角「立刻掃描」可手動執行。來源資料快取 6 小時，期間再次掃描或改偏好會重新比對快取，避免過量請求。
-- 內建來源：Remotive（遠端職缺，公開 API 約延遲 24 小時）、Arbeitnow（歐洲近期前 300 筆），以及 Stripe、Airbnb、Figma、Notion 公開職涯頁。這是起始範圍，**不是全網職缺搜尋，也不是使用者的預設偏好**。
+- 內建 17 個來源：Remote OK、Jobicy（最新 100 筆遠端職缺）、Remotive（遠端職缺，公開 API 約延遲 24 小時）、Arbeitnow（歐洲近期前 300 筆），以及 Stripe、Airbnb、Figma、Notion、Anthropic、Discord、Cloudflare、Databricks、Datadog、MongoDB、Reddit、Pinterest、Duolingo 公開職涯頁。這是起始範圍，**不是全網職缺搜尋，也不是使用者的預設偏好**。
 - Preference 可加入最多 20 個 Greenhouse／Ashby 公司職涯頁，或選擇只掃描自己的來源。接受 `https://job-boards.greenhouse.io/<board>`、`https://boards.greenhouse.io/<board>`、`https://jobs.ashbyhq.com/<board>`，也接受其職缺頁連結。
 - 公司／產業欄只作為排序偏好，不會自動發現任意公司的官網。要擴大搜尋範圍，請加入對應職涯頁。LinkedIn、Indeed、Workday 等不在此版直接讀取範圍，可手動新增。
 - 職稱任一條件符合即可；沒有職稱時改用技能關鍵字。地點與工作型態為篩選條件，排除條件比對職稱與 JD。提供有限的中英文別名（例如軟體工程師／Software Engineer、美國／US）；不是全文翻譯或 AI 語意搜尋。其他詞建議使用職缺原文常見用語。
@@ -82,3 +84,5 @@ npm start
 發布指令會先執行資料驗證、掃描篩選／去重、匯出／匯入與偏好檔覆寫測試，再只部署指定的 HTML、CSS、JavaScript、圖示與空白偏好範例。無需額外的 Actions workflow 寫入權限。公開網站的使用者資料不會進入 repository。
 
 參考：[GitHub Pages](https://docs.github.com/en/pages/getting-started-with-github-pages/what-is-github-pages)、[File System Access API](https://developer.chrome.com/docs/capabilities/web-apis/file-system-access)。
+
+新增來源文件：[Remote OK API](https://remoteok.com/api)、[Jobicy API](https://github.com/Jobicy/remote-jobs-api)。保留來源名稱與原始職缺連結。Jobicy 僅取最新 100 筆；Remote OK 缺少地點時不推定為全球可應徵。

@@ -48,8 +48,15 @@ const logFilters={all:['投遞總數',()=>true],waiting:['等待回覆',j=>['app
 function render() {
   const p=state.preferences,applied=state.jobs.filter(j=>j.appliedDate),saved=state.jobs.filter(j=>j.status==='saved');
   $('chipSave').textContent=saved.length||'';$('chipApps').textContent=applied.length?'('+applied.length+')':'';
-  const q=[C.tokens(p.roles)[0],C.tokens(p.locations)[0]].filter(Boolean).join(' ');
-  $('searchLinks').innerHTML=q?`<a class="link" href="https://www.google.com/search?q=${encodeURIComponent(q+' jobs')}" target="_blank" rel="noopener noreferrer">搜尋職缺 ↗</a>`:'<button class="link" id="setPreferenceLink">設定偏好 →</button>';
+  const role=C.tokens(p.roles)[0]||C.tokens(p.keywords)[0]||'',place=C.tokens(p.locations)[0]||'';
+  const keyword=[role,p.workMode==='remote'?'remote':''].filter(Boolean).join(' '),q=[keyword,place].filter(Boolean).join(' ');
+  const searches=[
+    ['Glassdoor','https://www.glassdoor.com/Job/jobs.htm?'+new URLSearchParams({'sc.keyword':q})],
+    ['Indeed','https://www.indeed.com/jobs?'+new URLSearchParams({q:keyword,l:place})],
+    ['LinkedIn','https://www.linkedin.com/jobs/search/?'+new URLSearchParams({keywords:role,location:place,...(p.workMode==='remote'?{f_WT:'2'}:{})})],
+    ['Google','https://www.google.com/search?'+new URLSearchParams({q:q?q+' jobs':'jobs'})]
+  ];
+  $('searchLinks').innerHTML='<span class="small">到其他平台搜尋：</span>'+searches.map(([name,url])=>`<a class="link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${name} ↗</a>`).join('')+'<span class="external-search-help small">帶入第一個職稱（或技能）與地點；Glassdoor 將地點併入關鍵字。外站結果不會自動匯入，可複製職缺網址後按「＋ 新增職缺」。</span>'+(q?'':'<button class="link" id="setPreferenceLink">設定偏好 →</button>');
   if($('setPreferenceLink'))$('setPreferenceLink').onclick=()=>switchTab('preferences');
   $('saveHint').textContent=`之後要投的職缺 · ${saved.length} 個`;
   $('saveRows').innerHTML=saved.map(jobRow).join('')||'<div class="empty"><b>還沒有待投職缺</b><br>從「職缺」加入待投，或在上方貼網址補上公司與職稱。</div>';

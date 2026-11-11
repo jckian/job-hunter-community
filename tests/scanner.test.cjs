@@ -5,6 +5,24 @@ const source=S.sources(p({scanCatalog:'custom',scanSources:'https://jobs.ashbyhq
 const raw=(patch={})=>({id:'1',title:'Software Engineer',location:'San Francisco, California',workplaceType:'Hybrid',jobUrl:'https://jobs.ashbyhq.com/example/1',descriptionPlain:'Build with JavaScript and Python',...patch});
 const row=(patch={})=>S.normalize({jobs:[raw(patch)]},source)[0];
 const cache=()=>{const map=new Map();return{get:async key=>map.get(key),set:async(key,v)=>map.set(key,v)};};
+test('expanded catalog includes aggregators and remains opt-out for custom-only profiles',()=>{
+  const list=S.sources(p()).list;assert.equal(list.length,17);assert.equal(new Set(list.map(s=>s.key)).size,17);
+  assert.ok(list.some(s=>s.kind==='remoteok'));assert.ok(list.some(s=>s.kind==='jobicy'));
+  assert.equal(S.sources(p({scanCatalog:'custom'})).list.length,0);
+});
+test('Remote OK metadata is skipped and geographic restrictions are never invented',()=>{
+  const src={kind:'remoteok',key:'remoteok:remote',label:'Remote OK'};
+  const jobs=S.normalize([{legal:'Feed attribution'},null,{id:'9',position:'Software Engineer',company:'Example',url:'https://remoteok.com/remote-jobs/9',location:'',description:'<p>Build software</p>',date:'2026-11-10'}],src);
+  assert.equal(jobs.length,1);assert.equal(jobs[0].company,'Example');assert.equal(jobs[0].source,'Remote OK');assert.equal(jobs[0].workMode,'remote');assert.equal(jobs[0].location,'');
+  assert.equal(S.assess(jobs[0],p({locations:'Taiwan'})).eligible,false);
+  assert.equal(jobs[0].description,'Build software');assert.equal(jobs[0].postedAt,'2026-11-10');
+});
+test('Jobicy maps titles, employer, restrictions, source URLs and monthly salary safely',()=>{
+  const jobs=S.normalize({jobs:[{id:1,jobTitle:'Software Engineer',companyName:'Example',jobGeo:'USA',url:'https://jobicy.com/jobs/1',jobDescription:'<p>Python</p>',salaryMin:4000,salaryMax:6000,salaryCurrency:'USD',salaryPeriod:'monthly',pubDate:'2026-11-10'}]}, {kind:'jobicy',key:'jobicy:remote',label:'Jobicy'});
+  const j=jobs[0];assert.equal(j.title,'Software Engineer');assert.equal(j.company,'Example');assert.equal(j.source,'Jobicy');assert.equal(j.location,'USA');assert.equal(j.workMode,'remote');assert.equal(j.url,'https://jobicy.com/jobs/1');assert.equal(j.description,'Python');assert.match(j.salary,/monthly/);assert.equal(j.salaryMaximum,'');
+  assert.equal(S.assess(j,p({locations:'Taiwan'})).eligible,false);
+  assert.equal(S.assess(j,p({locations:'US',salaryMin:'100000',currency:'USD'})).eligible,true);
+});
 test('old preferences and backups migrate without requiring new fields',()=>{const old={roles:'Designer',workMode:'any'};const result=C.validateState({schemaVersion:1,preferences:old,jobs:[]});assert.equal(result.preferences.scanSchedule,'auto');assert.equal(result.preferences.scanCatalog,'default');assert.equal(result.preferences.roles,'Designer');});
 test('custom sources support board and posting links, deduplicate and reject untrusted hosts',()=>{
   const result=S.sources(p({scanCatalog:'custom',scanSources:'https://jobs.ashbyhq.com/example/1\nhttps://jobs.ashbyhq.com/example\nhttps://job-boards.greenhouse.io/example/jobs/3\nhttps://evil.example/jobs\nhttp://localhost:8765/\nhttps://jobs.ashbyhq.com@evil.example/x'}));

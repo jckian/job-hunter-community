@@ -3,12 +3,15 @@
   const INTERVAL=6*60*60*1000;
   // Public starting catalog, not a user's preferred employers. Custom-only is available.
   const DEFAULTS=[
+    {kind:'remoteok',slug:'remote',label:'Remote OK · 遠端職缺',url:'https://remoteok.com/api'},
+    {kind:'jobicy',slug:'remote',label:'Jobicy · 最新 100 筆遠端職缺',url:'https://jobicy.com/api/v2/remote-jobs?count=100'},
     {kind:'remotive',slug:'remote',label:'Remotive · 遠端職缺',url:'https://remotive.com/api/remote-jobs'},
     {kind:'arbeitnow',slug:'europe',label:'Arbeitnow · 歐洲近期職缺（前 300 筆）',url:'https://www.arbeitnow.com/api/job-board-api'},
     {kind:'greenhouse',slug:'stripe',label:'Stripe'},
     {kind:'greenhouse',slug:'airbnb',label:'Airbnb'},
     {kind:'greenhouse',slug:'figma',label:'Figma'},
-    {kind:'ashby',slug:'notion',label:'Notion'}
+    {kind:'ashby',slug:'notion',label:'Notion'},
+    ...[['anthropic','Anthropic'],['discord','Discord'],['cloudflare','Cloudflare'],['databricks','Databricks'],['datadog','Datadog'],['mongodb','MongoDB'],['reddit','Reddit'],['pinterest','Pinterest'],['duolingo','Duolingo']].map(([slug,label])=>({kind:'greenhouse',slug,label}))
   ];
   function source(s){return {...s,key:s.kind+':'+s.slug,url:s.url||(s.kind==='greenhouse'?`https://boards-api.greenhouse.io/v1/boards/${s.slug}/jobs?content=true`:`https://api.ashbyhq.com/posting-api/job-board/${s.slug}?includeCompensation=true`)};}
   function sources(p){
@@ -63,10 +66,13 @@
   function canonical(url){const safe=C.safeUrl(url);if(!safe)return '';const u=new URL(safe);for(const key of [...u.searchParams.keys()])if(/^utm_|^(source|ref|referrer|gh_src|lever-source)$/i.test(key))u.searchParams.delete(key);u.hash='';u.searchParams.sort();return u.href.replace(/\/$/,'');}
   function hash(s){let a=2166136261,b=5381;for(const c of s){a=Math.imul(a^c.charCodeAt(0),16777619);b=Math.imul(b,33)^c.charCodeAt(0);}return (a>>>0).toString(16)+(b>>>0).toString(16);}
   function normalize(data,s,at=C.now()){
-    const items=s.kind==='arbeitnow'?data?.data:data?.jobs;
+    const items=s.kind==='remoteok'?data:s.kind==='arbeitnow'?data?.data:data?.jobs;
     if(!Array.isArray(items))throw new Error('來源回應格式不正確');
     const out=[];
-    for(const raw of items.slice(0,5000)){
+    for(let raw of items.slice(0,5000)){
+      if(!raw||typeof raw!=='object')continue;
+      if(s.kind==='remoteok')raw={...raw,title:raw.position,company_name:raw.company,remote:true,publishedAt:raw.date};
+      if(s.kind==='jobicy')raw={...raw,title:raw.jobTitle,company_name:raw.companyName,location:raw.jobGeo,description:raw.jobDescription||raw.jobExcerpt,remote:true,publishedAt:raw.pubDate,salary:[raw.salaryMin,raw.salaryMax].filter(v=>typeof v==='number'&&v>0).join(' – ')+(raw.salaryCurrency?' '+raw.salaryCurrency:'')+(raw.salaryPeriod?' / '+raw.salaryPeriod:'')};
       if(raw.isListed===false)continue;
       const url=C.safeUrl(raw.absolute_url||raw.jobUrl||raw.url),title=plain(raw.title);if(!url||!title)continue;
       const company=plain(raw.company_name||s.label),location=plain(s.kind==='greenhouse'?raw.location?.name:s.kind==='remotive'?raw.candidate_required_location:[raw.location,...(raw.secondaryLocations||[]).map(x=>x.location)].filter(Boolean).join('; '));
@@ -74,7 +80,7 @@
       const components=(raw.compensation?.compensationTiers||[]).flatMap(t=>t.components||[]).filter(c=>c.compensationType==='Salary'&&c.interval==='YEAR'&&c.currencyCode);
       const currencies=[...new Set(components.map(c=>c.currencyCode))],salaryCurrency=currencies.length===1?currencies[0]:'';
       const mins=components.map(c=>c.minValue).filter(n=>typeof n==='number'),maxs=components.map(c=>c.maxValue).filter(n=>typeof n==='number');
-      out.push(C.validateJob({id:'scan-'+hash(canonical(url)),company,title,url,location,workMode,status:'discovered',appliedDate:'',followupDate:'',salary:plain(raw.salary||raw.compensation?.scrapeableCompensationSalarySummary||''),salaryMinimum:salaryCurrency&&mins.length?String(Math.min(...mins)):'',salaryMaximum:salaryCurrency&&maxs.length?String(Math.max(...maxs)):'',salaryCurrency,description:plain(raw.descriptionPlain||raw.content||raw.descriptionHtml||raw.description).slice(0,10000),notes:'',createdAt:at,updatedAt:at,source:s.kind==='remotive'?'Remotive':s.kind==='arbeitnow'?'Arbeitnow':s.kind+' · '+s.label,sourceId:s.key+':'+String(raw.id||raw.slug||hash(url)),fetchedAt:at,postedAt:String(raw.publishedAt||raw.publication_date||raw.updated_at||''),history:[]}));
+      out.push(C.validateJob({id:'scan-'+hash(canonical(url)),company,title,url,location,workMode,status:'discovered',appliedDate:'',followupDate:'',salary:plain(raw.salary||raw.compensation?.scrapeableCompensationSalarySummary||''),salaryMinimum:salaryCurrency&&mins.length?String(Math.min(...mins)):'',salaryMaximum:salaryCurrency&&maxs.length?String(Math.max(...maxs)):'',salaryCurrency,description:plain(raw.descriptionPlain||raw.content||raw.descriptionHtml||raw.description).slice(0,10000),notes:'',createdAt:at,updatedAt:at,source:({remotive:'Remotive',arbeitnow:'Arbeitnow',remoteok:'Remote OK',jobicy:'Jobicy'})[s.kind]||s.kind+' · '+s.label,sourceId:s.key+':'+String(raw.id||raw.slug||hash(url)),fetchedAt:at,postedAt:String(raw.publishedAt||raw.publication_date||raw.updated_at||''),history:[]}));
     }
     return out;
   }
